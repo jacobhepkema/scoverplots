@@ -49,3 +49,39 @@ pheatmap(to_z(category_means_aggregates), color=heatmap_colors,
          filename = paste0(outdir, "2a.pdf"),
          useDingbats=FALSE,
          annotation_row = curr_category_annot)
+all_LOO_mat <- as.matrix(read.csv("data/kidney/kidney_influence.csv", row.names = 1))
+all_LOO_mat_selection <- all_LOO_mat[rownames(motif_family_annotation[motif_family_annotation$subfamily %in% rownames(subfams_loo_df),]),]
+LOO_mat_melted <- melt(all_LOO_mat_selection) %>% magrittr::set_colnames(c("Motif", "Pool", "Weight"))
+LOO_mat_melted$Celltype <- curr_colData[LOO_mat_melted$Pool,1]
+LOO_mat_melted$`Motif cluster annotation` <- motif_family_annotation[as.character(LOO_mat_melted$Motif),]$subfamily
+all_LOO_mat_selection_aggregates <- matrix(nrow=length(unique(LOO_mat_melted$`Motif cluster annotation`)), 
+                                           ncol=ncol(all_LOO_mat_selection))
+for(i in 1:nrow(all_LOO_mat_selection_aggregates)){
+  curr_motif_family <- unique(LOO_mat_melted$`Motif cluster annotation`)[i]
+  all_LOO_mat_selection_aggregates[i,] <- colSums(all_LOO_mat_selection[rownames(all_LOO_mat_selection) 
+                                                                        %in% rownames(motif_family_annotation[motif_family_annotation$subfamily ==
+                                                                                                                curr_motif_family,,drop=FALSE]),])
+}
+rownames(all_LOO_mat_selection_aggregates) <- unique(LOO_mat_melted$`Motif cluster annotation`)
+colnames(all_LOO_mat_selection_aggregates) <- colnames(all_LOO_mat_selection)
+all_LOO_mat_selection_aggregates_melt <- melt(all_LOO_mat_selection_aggregates) %>% 
+  magrittr::set_colnames(c("Motif cluster annotation", "Pool", "Aggregate of motif weights"))
+all_LOO_mat_selection_aggregates_melt$Celltype <- curr_colData[all_LOO_mat_selection_aggregates_melt$Pool,1]
+all_LOO_mat_selection_aggregates_melt$Category <- curr_colData[all_LOO_mat_selection_aggregates_melt$Pool,]$cell_type_category
+# Order:
+all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation` <- factor(x=as.character(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`),
+                                                                           levels=unique(as.character(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`))[order(unique(as.character(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`)))])
+graphics.off()
+# Fig 3a =====
+ggplot(all_LOO_mat_selection_aggregates_melt, 
+       aes(x=reorder_within(Category,`Aggregate of motif weights`,`Motif cluster annotation`), y=`Aggregate of motif weights`, 
+           fill=`Category`)) +
+  geom_half_boxplot() + geom_half_violin(side="r") +
+  scale_x_reordered() +
+  scale_fill_stata() + theme_bw(base_size=14) + theme(axis.text.x = element_text(angle=45,hjust=1)) +
+  labs(x = "Category", y="Aggregate of motif influence scores") +
+  theme_Nice() +
+  facet_wrap(~`Motif cluster annotation`, scales="free", ncol = 4)
+ggsave(paste0(outdir, "/3a.pdf"),
+       width=16,height=9, useDingbats=FALSE)
+dev.off()
