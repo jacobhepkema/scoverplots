@@ -5,6 +5,7 @@ suppressMessages(library(ggplot2))
 suppressMessages(library(ggrepel))
 suppressMessages(library(ggthemes))
 suppressMessages(library(gghalves))
+suppressMessages(library(ggseqlogo))
 suppressMessages(library(pheatmap))
 suppressMessages(library(patchwork))
 suppressMessages(library(SingleCellExperiment))
@@ -84,4 +85,155 @@ ggplot(all_LOO_mat_selection_aggregates_melt,
   facet_wrap(~`Motif cluster annotation`, scales="free", ncol = 4)
 ggsave(paste0(outdir, "/3a.pdf"),
        width=16,height=9, useDingbats=FALSE)
-dev.off()
+prcomp_mat <- prcomp(t(all_LOO_mat_selection))
+eigs <- prcomp_mat$sdev^2
+variances_expl <- eigs/sum(sum(eigs))
+prcomp_mat <- prcomp_mat$x
+prcomp_mat <- as.data.frame(prcomp_mat)
+curr_colData$Origin <- sapply(curr_colData$most_abundant_dataset, FUN=function(x){ 
+  if(x == "1") { return("Mature") } else { return("Fetal") }  
+  })
+curr_colData$Category <- curr_colData$cell_type_category
+curr_colData$Celltype <- curr_colData$most_abundant_celltype
+prcomp_mat$Celltype <- curr_colData$Celltype
+prcomp_mat$Category <- curr_colData$Category
+prcomp_mat$Origin <- as.character(curr_colData[rownames(prcomp_mat),]$Origin)
+graphics.off()
+# Fig 2c =====
+ggplot(prcomp_mat, aes(x=PC1, y=PC2, color=Category, shape=Origin)) + 
+  geom_point(size=2) + theme_bw(base_size=14) +
+  labs(x=paste0("PC1 (", round(variances_expl[1]*100, 2), "%)"),
+       y=paste0("PC2 (", round(variances_expl[2]*100, 2), "%)")) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right") +
+  scale_color_stata()
+ggsave(paste0(outdir, "2c.pdf"), width=7, height=7,
+       useDingbats=FALSE)
+all_motifs <- read_meme("data/kidney/kidney_motifs.meme")
+# CREB
+ggplot() + geom_logo(all_motifs$`4_285`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_CREB.eps"), width=3.5,height=2)
+# ETS/1
+ggplot() + geom_logo(all_motifs$`4_394`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_ETS1.eps"), width=3.5,height=2)
+# ETS/2
+ggplot() + geom_logo(all_motifs$`4_475`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_ETS2.eps"), width=3.5,height=2)
+# KLF/SP/2
+ggplot() + geom_logo(all_motifs$`2_297`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_KLF.eps"), width=3.5,height=2)
+# E2F
+ggplot() + geom_logo(all_motifs$`0_55`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_E2F.eps"), width=3.5,height=2)
+# YY1
+ggplot() + geom_logo(all_motifs$`2_426`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_YY1.eps"), width=3.5,height=2)
+# NRF1
+ggplot() + geom_logo(all_motifs$`4_89`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_NRF1.eps"), width=3.5,height=2)
+# ZNF143
+ggplot() + geom_logo(all_motifs$`2_474`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_ZNF143.eps"), width=3.5,height=2)
+# KAISO
+ggplot() + geom_logo(all_motifs$`3_195`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_KAISO.eps"), width=3.5,height=2)
+# GC-tract
+ggplot() + geom_logo(all_motifs$`2_190`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_GC-tract.eps"), width=3.5,height=2)
+# ZFX
+ggplot() + geom_logo(all_motifs$`4_189`, method = "bits") + theme_logo() +
+  scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
+ggsave(filename=paste0(outdir, "kidney_ZFX.eps"), width=3.5,height=2)
+pseudotime_proliferation_corr_df <- read.csv("data/kidney/kidney_correlations.csv", 
+                                             row.names=1)
+pseudotime_proliferation_corr_df <- t(pseudotime_proliferation_corr_df)
+rownames(pseudotime_proliferation_corr_df) <- c("Correlation with proximal tubule pseudotime", 
+                                                "Correlation with proliferation",
+                                                "Correlation with GO:proximal tubule development")
+graphics.off()
+# Fig 2e =====
+pheatmap::pheatmap(pseudotime_proliferation_corr_df, cluster_rows = FALSE, 
+                   color=heatmap_colors, border_color = NA, cellwidth = 12, cellheight = 12,
+                   angle_col=45, filename = paste0(outdir, "/2e.pdf"), width=7, height=3)
+cat("Done\n")
+CREM_df <- read.csv("data/kidney/kidney_CREB_CREM.csv", row.names=1)
+ELF1_df <- read.csv("data/kidney/kidney_ETS1_ELF1.csv", row.names=1)
+ETV3_df <- read.csv("data/kidney/kidney_ETS1_ETV3.csv", row.names=1)
+FLI1_df <- read.csv("data/kidney/kidney_ETS1_FLI1.csv", row.names=1)
+YY1_df <- read.csv("data/kidney/kidney_YY1_YY1.csv", row.names=1)
+YY2_df <- read.csv("data/kidney/kidney_YY1_YY2.csv", row.names=1)
+NRF1_df <- read.csv("data/kidney/kidney_NRF1_NRF1.csv", row.names=1)
+BANP_df <- read.csv("data/kidney/kidney_NRF1_BANP.csv", row.names=1)
+alphas <- 0.6
+CREB_plot <- ggplot(CREM_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE) +
+  labs(color="Category", 
+       x="CREB/ATF/1:bZIP", 
+       y="CREM expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0, 0.02, 0.04)) + theme(aspect.ratio=1)
+YY1_plot <- ggplot(YY1_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="YY1:C2H2", 
+       y="YY1 expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0.25,0.45)) + theme(aspect.ratio=1)
+YY2_plot <- ggplot(YY2_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="YY1:C2H2", 
+       y="YY2 expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0.25,0.45)) + theme(aspect.ratio=1)
+NRF1_plot <- ggplot(NRF1_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="NRF1:CNC-bZIP", 
+       y="NRF1 expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0, 0.25,0.35,0.45)) + theme(aspect.ratio=1)
+BANP_plot <- ggplot(BANP_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="NRF1:CNC-bZIP", 
+       y="BANP expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0, 0.25,0.35,0.45)) + theme(aspect.ratio=1)
+ELF1_plot <- ggplot(ELF1_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="ETS/1:ETS", 
+       y="ELF1 expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0.25,0.45)) + theme(aspect.ratio=1)
+FLI1_plot <- ggplot(FLI1_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="ETS/1:ETS", 
+       y="FLI1 expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0.25,0.45)) + theme(aspect.ratio=1)
+ETV3_plot <- ggplot(ETV3_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="ETS/1:ETS", 
+       y="ETV3 expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0.25,0.45)) + theme(aspect.ratio=1) +
+  theme(legend.position="right")
+graphics.off()
+# Fig 3b =====
+(YY1_plot | NRF1_plot | ELF1_plot) / (YY2_plot | BANP_plot  | FLI1_plot)
+ggsave(paste0(outdir, "/3b.pdf"), width=8, height=4, useDingbats=FALSE)
+# Correlations were obtained using e.g. cor(ETV5_corr_df$agg_LOO, ETV5_corr_df$exp, method="spearman")
