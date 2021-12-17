@@ -9,6 +9,7 @@ suppressMessages(library(ggseqlogo))
 suppressMessages(library(pheatmap))
 suppressMessages(library(patchwork))
 suppressMessages(library(SingleCellExperiment))
+suppressMessages(library(umap))
 options(stringsAsFactors = FALSE)
 suppressMessages(source("scover_helper_functions.R"))
 # Amount of motifs
@@ -73,7 +74,6 @@ all_LOO_mat_selection_aggregates_melt$Category <- curr_colData[all_LOO_mat_selec
 all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation` <- factor(x=as.character(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`),
                                                                            levels=unique(as.character(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`))[order(unique(as.character(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`)))])
 graphics.off()
-# Fig 3a =====
 ggplot(all_LOO_mat_selection_aggregates_melt, 
        aes(x=reorder_within(Category,`Aggregate of motif weights`,`Motif cluster annotation`), y=`Aggregate of motif weights`, 
            fill=`Category`)) +
@@ -83,7 +83,7 @@ ggplot(all_LOO_mat_selection_aggregates_melt,
   labs(x = "Category", y="Aggregate of motif influence scores") +
   theme_Nice() +
   facet_wrap(~`Motif cluster annotation`, scales="free", ncol = 4)
-ggsave(paste0(outdir, "/3a.pdf"),
+ggsave(paste0(outdir, "kidney_supp.pdf"),
        width=16,height=9, useDingbats=FALSE)
 prcomp_mat <- prcomp(t(all_LOO_mat_selection))
 eigs <- prcomp_mat$sdev^2
@@ -165,7 +165,6 @@ graphics.off()
 pheatmap::pheatmap(pseudotime_proliferation_corr_df, cluster_rows = FALSE, 
                    color=heatmap_colors, border_color = NA, cellwidth = 12, cellheight = 12,
                    angle_col=45, filename = paste0(outdir, "/2e.pdf"), width=7, height=3)
-cat("Done\n")
 CREM_df <- read.csv("data/kidney/kidney_CREB_CREM.csv", row.names=1)
 ELF1_df <- read.csv("data/kidney/kidney_ETS1_ELF1.csv", row.names=1)
 ETV3_df <- read.csv("data/kidney/kidney_ETS1_ETV3.csv", row.names=1)
@@ -233,7 +232,71 @@ ETV3_plot <- ggplot(ETV3_df, aes(x=agg_scores, y=exp_scores, color=cell_type_cat
   scale_color_stata() + scale_x_continuous(breaks=c(0.25,0.45)) + theme(aspect.ratio=1) +
   theme(legend.position="right")
 graphics.off()
-# Fig 3b =====
 (YY1_plot | NRF1_plot | ELF1_plot) / (YY2_plot | BANP_plot  | FLI1_plot)
-ggsave(paste0(outdir, "/3b.pdf"), width=8, height=4, useDingbats=FALSE)
+ggsave(paste0(outdir, "/3c.pdf"), width=8, height=4, useDingbats=FALSE)
 # Correlations were obtained using e.g. cor(ETV5_corr_df$agg_LOO, ETV5_corr_df$exp, method="spearman")
+expression_hits_df <- read.csv("data/kidney/kidney_expression_corrs.csv", header=TRUE)
+expression_hits_df$expression_2 <- expression_hits_df$mean_expression
+expression_hits_df$expression_2[expression_hits_df$pval > 0.05] <- NA
+expression_hits_df$tf_labels <- NA
+top_n <- 3
+for(i in 1:length(unique(expression_hits_df$family))){
+  curr_cluster <- unique(expression_hits_df$family)[i]
+  curr_corr_tf_df <- expression_hits_df[expression_hits_df$family == curr_cluster,,drop=FALSE]
+  curr_corr_tf_df <- curr_corr_tf_df[order(abs(curr_corr_tf_df$correlation), decreasing = TRUE),,drop=FALSE]
+  annot_tfs <- curr_corr_tf_df$gene[1:(ifelse(nrow(curr_corr_tf_df) < top_n, nrow(curr_corr_tf_df), top_n))]
+  expression_hits_df$tf_labels[expression_hits_df$family == curr_cluster &
+                                 expression_hits_df$gene %in% annot_tfs] <- 
+    expression_hits_df$gene[expression_hits_df$family == curr_cluster &
+                            expression_hits_df$gene %in% annot_tfs]
+}
+expression_hits_df$tf_labels[expression_hits_df$pval > 0.05] <- ""
+graphics.off()
+ggplot(expression_hits_df, aes(x=family, y=correlation, color=expression_2)) +
+  geom_jitter(width = 0) + 
+  geom_label_repel(label=expression_hits_df$tf_labels, size=4) +
+  theme_bw(base_size=14) + 
+  theme_Nice() + theme(legend.position = "right") + 
+  labs(x="Motif cluster name", 
+       y="Spearman R", color="Mean TF expression across pools") 
+ggsave(filename=paste0(outdir, "/3b.pdf"), 
+       width = 12, height=6, useDingbats=FALSE)
+aligned_motif_patterns <- read.csv("data/kidney/kidney_motifs_in_promoters.csv.gz", row.names = 1, 
+                                   header = TRUE)
+colnames(aligned_motif_patterns) <- str_split_fixed(colnames(aligned_motif_patterns), "X", n=2)[,2]
+motif_families <- read.csv("data/kidney/kidney_motif_families.csv", row.names = 1)
+motif_families_repro <- read.csv("data/kidney/kidney_repr_motif_families.csv", row.names=1)
+prom_mot_fam_scores <- read.csv("data/kidney/kidney_prom_mot_fam_scores.csv.gz", row.names=1)
+prom_umap <- umap::umap(aligned_motif_patterns)
+prom_umapp <- prom_umap$layout
+colnames(prom_umapp) <- c("UMAP1", "UMAP2")
+prom_umapp <- cbind(prom_umapp, prom_mot_fam_scores)
+# Fig 3a =====
+m_klf <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=KLF.SP.2.C2H2)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right")
+m_yy1 <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=YY1.C2H2)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right")
+m_ets1 <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=ETS.1.ETS)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right")
+m_nrf <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=NRF1.CNC.bZIP)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right")
+m_znf <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=ZNF143.C2H2)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right")
+m_zfx <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=ZFX.C2H2)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right")
+(m_klf | m_zfx | m_ets1) / (m_nrf | m_znf | m_yy1)
+ggsave(paste0(outdir, "3a.pdf"), width = 16, height=9)
+
+cat("Done\n")
