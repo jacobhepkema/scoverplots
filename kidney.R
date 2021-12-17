@@ -49,7 +49,7 @@ pheatmap(to_z(category_means_aggregates), color=heatmap_colors,
          filename = paste0(outdir, "2a.pdf"),
          useDingbats=FALSE,
          annotation_row = curr_category_annot)
-all_LOO_mat <- as.matrix(read.csv("data/kidney/kidney_influence.csv", row.names = 1))
+all_LOO_mat <- as.matrix(read.csv("data/kidney/kidney_influence.csv.gz", row.names = 1))
 all_LOO_mat_selection <- all_LOO_mat[rownames(motif_family_annotation[motif_family_annotation$subfamily %in% rownames(subfams_loo_df),]),]
 LOO_mat_melted <- melt(all_LOO_mat_selection) %>% magrittr::set_colnames(c("Motif", "Pool", "Weight"))
 LOO_mat_melted$Celltype <- curr_colData[LOO_mat_melted$Pool,1]
