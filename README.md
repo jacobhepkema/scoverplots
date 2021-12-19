@@ -10,7 +10,7 @@ Rscript kidney.R
 ## Tabula Muris
 
 ```
-TODO
+Rscript tabulamuris.R
 ```
 
 ## SNARE-seq
