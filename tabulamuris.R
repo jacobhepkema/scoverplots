@@ -149,9 +149,9 @@ ggplot() + geom_logo(all_motifs$`5_355`, method = "bits") + theme_logo() +
 ggsave(filename=paste0(outdir,"tm_TBX.eps"), width=3.5,height=2)
 
 # GO term analysis: correlations of motif influence scores with expression of GO-term related genes:
-GO_melt_cast_no_sig <- readRDS("tm_go_terms.RDS")
-GO_row_annot_col <- readRDS("tm_go_term_colours.RDS")
-GO_row_annot <- readRDS("tm_go_term_annotation.RDS")
+GO_melt_cast_no_sig <- readRDS("data/tm/tm_go_terms.RDS")
+GO_row_annot_col <- readRDS("data/tm/tm_go_term_colours.RDS")
+GO_row_annot <- readRDS("data/tm/tm_go_term_annotation.RDS")
 
 # Fig 5b =====
 pheatmap::pheatmap(GO_melt_cast_no_sig,
