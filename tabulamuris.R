@@ -147,92 +147,20 @@ ggsave(filename=paste0(outdir,"tm_E2F.eps"), width=3.5,height=2)
 ggplot() + geom_logo(all_motifs$`5_355`, method = "bits") + theme_logo() +
   scale_y_continuous(limits=c(0,2), breaks = c(0,1,2)) + theme_Nice(angled = FALSE)
 ggsave(filename=paste0(outdir,"tm_TBX.eps"), width=3.5,height=2)
+
 # GO term analysis: correlations of motif influence scores with expression of GO-term related genes:
-GO_terms <- readLines("data/tm/go_scfind.tsv")
-names(GO_terms) <- sapply(GO_terms, FUN=function(x){return(str_split(x, "\t")[[1]][1])})
-GO_terms <- sapply(GO_terms, FUN=function(x){
-  str_split(str_split(x, "\t")[[1]][2], ",")[[1]]
-})
-curr_GO_lengths <- c()
-pb <- txtProgressBar(0, length(GO_terms), style=3)
-for(i in 1:length(GO_terms)){
-  curr_GO_name <- names(GO_terms)[i]
-  curr_GO_genes <- GO_terms[[i]]
-  curr_GO_genes <- unique(curr_GO_genes[curr_GO_genes %in% rownames(curr_sce)])
-  curr_GO_length <- length(curr_GO_genes)
-  curr_GO_lengths <- c(curr_GO_lengths, curr_GO_length)
-  setTxtProgressBar(pb, i)
-}
-# Select GO terms with at least 1 gene and fewer than 50 genes in set (that are found
-# in the current experiment)
-GO_selection <- GO_terms[which(curr_GO_lengths < 50 & curr_GO_lengths > 0)]
-curr_GO_lengths_selection <- curr_GO_lengths[curr_GO_lengths < 50 & curr_GO_lengths > 0]
-GO_selection_corrs <- list()
-GO_selection_pvals <- list()
-pb <- txtProgressBar(0, length(GO_selection), style=3)
-for(j in 1:length(GO_selection)){ # Correlate expression of GO term genes to motif influence scores. This can take a while
-  curr_GO_name <- names(GO_selection)[j]
-  curr_GO_genes <- GO_selection[[j]]
-  curr_GO_genes <- unique(curr_GO_genes[curr_GO_genes %in% rownames(curr_sce)])
-  curr_GO_expression <- colMeans(logcounts(curr_sce[curr_GO_genes,]))
-  
-  curr_GO_corrs <- c()
-  curr_GO_pvals <- c()
-  for(i in 1:length(unique(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`))){
-    curr_cluster_annot <- as.character(unique(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`))[i]
-    curr_melt_aggregates <- all_LOO_mat_selection_aggregates_melt[all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation` == curr_cluster_annot,]
-    curr_GO_corrs <- c(curr_GO_corrs, cor(curr_melt_aggregates$`Aggregate of motif influence scores`, curr_GO_expression, 
-                                          method="spearman"))
-    curr_GO_pvals <- c(curr_GO_pvals, p.adjust(cor.test(curr_melt_aggregates$`Aggregate of motif influence scores`, 
-                                                        curr_GO_expression, 
-                                                        method="spearman", 
-                                                        exact = FALSE)$p.value, method="fdr"))
-  }
-  names(curr_GO_corrs) <- unique(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`)
-  names(curr_GO_pvals) <- names(curr_GO_corrs)
-  GO_selection_corrs[[j]] <- curr_GO_corrs
-  GO_selection_pvals[[j]] <- curr_GO_pvals
-  setTxtProgressBar(pb, j)
-}
-names(GO_selection_corrs) <- names(GO_selection)
-names(GO_selection_pvals) <- names(GO_selection)
-GO_melt <- melt(GO_selection_corrs)
-GO_melt$motif_family <- names(GO_selection_corrs[[1]])
-GO_melt_p <- melt(GO_selection_pvals)
-GO_melt$p_corr <- GO_melt_p$value
-colnames(GO_melt) <- c("Spearman R", "GO term", "Motif cluster annotation", "Corrected p-value")
-GO_melt_cast <- dcast(GO_melt, formula=`GO term`~`Motif cluster annotation`, value.var="Spearman R")
-rownames(GO_melt_cast) <- GO_melt_cast[,1]
-GO_melt_cast <- GO_melt_cast[,-c(1)]
-GO_melt_cast_pval <- dcast(GO_melt, formula=`GO term`~`Motif cluster annotation`, value.var="Corrected p-value")
-GO_melt_cast_pval <- as.data.frame(GO_melt_cast_pval)
-rownames(GO_melt_cast_pval) <- GO_melt_cast_pval[,1]
-GO_melt_cast_pval <- GO_melt_cast_pval[,-c(1)]
-bottom_top_quantiles <- quantile(as.numeric(unlist(GO_melt_cast)), c(0.01, 0.99))
-has_no_significant <- apply(GO_melt_cast, 1, FUN=function(x){
-  return((sum(x < bottom_top_quantiles[1]) + 
-            sum(x > bottom_top_quantiles[2])) 
-         == 0)
-})
-sum(!has_no_significant)
-# Cluster annotation
-k <- 3
-clust_annot <- cutree(hclust(dist(GO_melt_cast[!has_no_significant,])), k=k)
-GO_row_annot <- data.frame(row.names=names(clust_annot),
-                           "GO term cluster"=as.character(clust_annot))
-colnames(GO_row_annot) <- "GO term cluster"
-GO_row_annot_col <- list(
-  "GO term cluster" = stata_pal()(k)
-)
-names(GO_row_annot_col$`GO term cluster`) <- as.character(1:k)
+GO_melt_cast_no_sig <- readRDS("tm_go_terms.RDS")
+GO_row_annot_col <- readRDS("tm_go_term_colours.RDS")
+GO_row_annot <- readRDS("tm_go_term_annotation.RDS")
+
 # Fig 5b =====
-pheatmap::pheatmap(GO_melt_cast[!has_no_significant,],
+pheatmap::pheatmap(GO_melt_cast_no_sig,
                    show_rownames = FALSE, border_color = NA,
                    color=heatmap_colors, cellwidth = 12,
                    angle_col = 45, cellheight = .14, 
                    annotation_row = GO_row_annot, 
                    annotation_colors = GO_row_annot_col,
-                   filename = paste0(outdir, "/Fig5b.pdf"),
+                   filename = paste0(outdir, "/5b.pdf"),
                    useDingbats=FALSE)
 graphics.off()
 # # The annotation for GO terms was added in Illustrator, and it was found with these commands:
@@ -240,4 +168,120 @@ graphics.off()
 # cat(names(significant_cluster[significant_cluster == 1])[sample(length(significant_cluster[significant_cluster == 1]), size=10)], sep="\n")
 # cat(names(significant_cluster[significant_cluster == 2])[sample(length(significant_cluster[significant_cluster == 2]), size=10)], sep="\n")
 # cat(names(significant_cluster[significant_cluster == 3])[sample(length(significant_cluster[significant_cluster == 3]), size=10)], sep="\n")
+
+# # The go term values were calculated using the following code:
+# GO_terms <- readLines("data/tm/go_scfind.tsv")
+# names(GO_terms) <- sapply(GO_terms, FUN=function(x){return(str_split(x, "\t")[[1]][1])})
+# GO_terms <- sapply(GO_terms, FUN=function(x){
+#   str_split(str_split(x, "\t")[[1]][2], ",")[[1]]
+# })
+# curr_GO_lengths <- c()
+# pb <- txtProgressBar(0, length(GO_terms), style=3)
+# for(i in 1:length(GO_terms)){
+#   curr_GO_name <- names(GO_terms)[i]
+#   curr_GO_genes <- GO_terms[[i]]
+#   curr_GO_genes <- unique(curr_GO_genes[curr_GO_genes %in% rownames(curr_sce)])
+#   curr_GO_length <- length(curr_GO_genes)
+#   curr_GO_lengths <- c(curr_GO_lengths, curr_GO_length)
+#   setTxtProgressBar(pb, i)
+# }
+# # Select GO terms with at least 1 gene and fewer than 50 genes in set (that are found
+# # in the current experiment)
+# GO_selection <- GO_terms[which(curr_GO_lengths < 50 & curr_GO_lengths > 0)]
+# curr_GO_lengths_selection <- curr_GO_lengths[curr_GO_lengths < 50 & curr_GO_lengths > 0]
+# GO_selection_corrs <- list()
+# GO_selection_pvals <- list()
+# pb <- txtProgressBar(0, length(GO_selection), style=3)
+# for(j in 1:length(GO_selection)){ # Correlate expression of GO term genes to motif influence scores. This can take a while
+#   curr_GO_name <- names(GO_selection)[j]
+#   curr_GO_genes <- GO_selection[[j]]
+#   curr_GO_genes <- unique(curr_GO_genes[curr_GO_genes %in% rownames(curr_sce)])
+#   curr_GO_expression <- colMeans(logcounts(curr_sce[curr_GO_genes,]))
+  
+#   curr_GO_corrs <- c()
+#   curr_GO_pvals <- c()
+#   for(i in 1:length(unique(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`))){
+#     curr_cluster_annot <- as.character(unique(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`))[i]
+#     curr_melt_aggregates <- all_LOO_mat_selection_aggregates_melt[all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation` == curr_cluster_annot,]
+#     curr_GO_corrs <- c(curr_GO_corrs, cor(curr_melt_aggregates$`Aggregate of motif influence scores`, curr_GO_expression, 
+#                                           method="spearman"))
+#     curr_GO_pvals <- c(curr_GO_pvals, p.adjust(cor.test(curr_melt_aggregates$`Aggregate of motif influence scores`, 
+#                                                         curr_GO_expression, 
+#                                                         method="spearman", 
+#                                                         exact = FALSE)$p.value, method="fdr"))
+#   }
+#   names(curr_GO_corrs) <- unique(all_LOO_mat_selection_aggregates_melt$`Motif cluster annotation`)
+#   names(curr_GO_pvals) <- names(curr_GO_corrs)
+#   GO_selection_corrs[[j]] <- curr_GO_corrs
+#   GO_selection_pvals[[j]] <- curr_GO_pvals
+#   setTxtProgressBar(pb, j)
+# }
+# names(GO_selection_corrs) <- names(GO_selection)
+# names(GO_selection_pvals) <- names(GO_selection)
+# GO_melt <- melt(GO_selection_corrs)
+# GO_melt$motif_family <- names(GO_selection_corrs[[1]])
+# GO_melt_p <- melt(GO_selection_pvals)
+# GO_melt$p_corr <- GO_melt_p$value
+# colnames(GO_melt) <- c("Spearman R", "GO term", "Motif cluster annotation", "Corrected p-value")
+# GO_melt_cast <- dcast(GO_melt, formula=`GO term`~`Motif cluster annotation`, value.var="Spearman R")
+# rownames(GO_melt_cast) <- GO_melt_cast[,1]
+# GO_melt_cast <- GO_melt_cast[,-c(1)]
+# GO_melt_cast_pval <- dcast(GO_melt, formula=`GO term`~`Motif cluster annotation`, value.var="Corrected p-value")
+# GO_melt_cast_pval <- as.data.frame(GO_melt_cast_pval)
+# rownames(GO_melt_cast_pval) <- GO_melt_cast_pval[,1]
+# GO_melt_cast_pval <- GO_melt_cast_pval[,-c(1)]
+# bottom_top_quantiles <- quantile(as.numeric(unlist(GO_melt_cast)), c(0.01, 0.99))
+# has_no_significant <- apply(GO_melt_cast, 1, FUN=function(x){
+#   return((sum(x < bottom_top_quantiles[1]) + 
+#             sum(x > bottom_top_quantiles[2])) 
+#          == 0)
+# })
+# sum(!has_no_significant)
+# # Cluster annotation
+# k <- 3
+# GO_melt_cast_no_sig <- GO_melt_cast[!has_no_significant,]
+# clust_annot <- cutree(hclust(dist(GO_melt_cast_no_sig)), k=k)
+# GO_row_annot <- data.frame(row.names=names(clust_annot),
+#                            "GO term cluster"=as.character(clust_annot))
+# colnames(GO_row_annot) <- "GO term cluster"
+# GO_row_annot_col <- list(
+#   "GO term cluster" = stata_pal()(k)
+# )
+# names(GO_row_annot_col$`GO term cluster`) <- as.character(1:k)
+
+# saveRDS(GO_row_annot, "tm_go_term_annotation.RDS")
+# saveRDS(GO_row_annot_col, "tm_go_term_colours.RDS")
+# saveRDS(GO_melt_cast[!has_no_significant,], "tm_go_terms.RDS")
+
+graphics.off()
+prcomp_mat <- prcomp(t(all_LOO_mat_selection))
+eigs <- prcomp_mat$sdev^2
+variances_expl <- eigs/sum(sum(eigs))
+prcomp_mat <- prcomp_mat$x
+prcomp_mat <- as.data.frame(prcomp_mat)
+# Add labels randomly:
+prcomp_mat$Category <- curr_colData$Category
+prcomp_mat$Celltype <- curr_colData$Celltype
+prcomp_mat <- prcomp_mat[sample(1:nrow(prcomp_mat), replace = FALSE),]
+prcomp_mat$ggrepel_labels <- prcomp_mat$Category
+prcomp_mat$ggrepel_labels[duplicated(prcomp_mat$ggrepel_labels)] <- ""
+# Fig 4c =====
+ggplot(prcomp_mat, aes(x=PC1, y=PC2, color=Category)) + geom_point() +
+  scale_color_stata() + theme_Nice(angled = FALSE) +
+  labs(x=paste0("PC1 (", round(variances_expl[1]*100, 2), "%)"),
+       y=paste0("PC2 (", round(variances_expl[2]*100, 2), "%)")) +
+  geom_label_repel(label=prcomp_mat$ggrepel_labels, size=4, show.legend = FALSE) + 
+  coord_fixed()
+ggsave(paste0(outdir, "4c.pdf"), width=7, height=7,
+       useDingbats=FALSE)
+graphics.off()
+ggplot(prcomp_mat, aes(x=PC1, y=PC2, color=Category)) + geom_point() +
+  scale_color_stata() + theme_Nice(angled = FALSE) + theme(legend.position = "right") + 
+  labs(x=paste0("PC1 (", round(variances_expl[1]*100, 2), "%)"),
+       y=paste0("PC2 (", round(variances_expl[2]*100, 2), "%)")) +
+  geom_label_repel(label=prcomp_mat$ggrepel_labels, size=4, show.legend = FALSE) + 
+  coord_fixed()
+ggsave(paste0(outdir, "4c2.pdf"), width=7, height=7,
+       useDingbats=FALSE)
+graphics.off()
 
