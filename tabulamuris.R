@@ -252,7 +252,6 @@ graphics.off()
 # saveRDS(GO_row_annot, "tm_go_term_annotation.RDS")
 # saveRDS(GO_row_annot_col, "tm_go_term_colours.RDS")
 # saveRDS(GO_melt_cast[!has_no_significant,], "tm_go_terms.RDS")
-
 graphics.off()
 prcomp_mat <- prcomp(t(all_LOO_mat_selection))
 eigs <- prcomp_mat$sdev^2
@@ -284,4 +283,136 @@ ggplot(prcomp_mat, aes(x=PC1, y=PC2, color=Category)) + geom_point() +
 ggsave(paste0(outdir, "4c2.pdf"), width=7, height=7,
        useDingbats=FALSE)
 graphics.off()
-
+Elf1_df <- read.csv("data/tm/tm_ets_elf1.csv", row.names=1)
+Irf2_df <- read.csv("data/tm/tm_irf_irf2.csv", row.names=1)
+Sp1_df <- read.csv("data/tm/tm_klf_sp1.csv", row.names=1)
+Zfx_df <- read.csv("data/tm/tm_zfx_zfx.csv", row.names=1)
+alphas <- 0.6
+Elf1_plot <- ggplot(Elf1_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE) +
+  labs(color="Category", 
+       x="ETS/1:ETS", 
+       y="Elf1 expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0.25,1.25)) + theme(aspect.ratio=1)
+Irf2_plot <- ggplot(Irf2_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="IRF/1:IRF", 
+       y="Irf2 expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0.05,0.1)) + theme(aspect.ratio=1)
+Sp1_plot <- ggplot(Sp1_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="KLF/SP/2:C2H2", 
+       y="Sp1 expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0.3,0.9)) + theme(aspect.ratio=1)
+Zfx_plot <- ggplot(Zfx_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="ZFX:C2H2", 
+       y="ZFX expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0.08,0.2)) + theme(aspect.ratio=1)
+(Elf1_plot | Irf2_plot) / (Sp1_plot | Zfx_plot)
+ggsave(paste0(outdir, "/5d.pdf"), width=8, height=4, useDingbats=FALSE)
+# # Correlations were obtained using e.g.:
+# cor(Elf1_df$agg_scores, Elf1_df$exp_scores, method="spearman")
+# cor(Irf2_df$agg_scores, Irf2_df$exp_scores, method="spearman")
+# cor(Sp1_df$agg_scores, Sp1_df$exp_scores, method="spearman")
+# cor(Zfx_df$agg_scores, Zfx_df$exp_scores, method="spearman")
+# Legend was added by plotting:
+legend_plot <- ggplot(Zfx_df, aes(x=agg_scores, y=exp_scores, color=cell_type_category)) +
+  geom_point(alpha=alphas) + theme_bw(base_size=14) +
+  theme_Nice(angled=FALSE)+
+  labs(color="Category", 
+       x="ZFX:C2H2", 
+       y="ZFX expression") + 
+  scale_color_stata() + scale_x_continuous(breaks=c(0.08,0.2)) + theme(aspect.ratio=1, legend.position = "right")
+(Elf1_plot | Irf2_plot) / (Sp1_plot | legend_plot)
+ggsave(paste0(outdir, "/5d_with_legend.pdf"), width=8, height=4, useDingbats=FALSE)
+expression_hits_df <- read.csv("data/tm/tm_expression_corrs.csv", header=TRUE)
+expression_hits_df$expression_2 <- expression_hits_df$mean_expression
+expression_hits_df$expression_2[expression_hits_df$pval > 0.05] <- NA
+expression_hits_df$tf_labels <- NA
+top_n <- 3
+for(i in 1:length(unique(expression_hits_df$family))){
+  curr_cluster <- unique(expression_hits_df$family)[i]
+  curr_corr_tf_df <- expression_hits_df[expression_hits_df$family == curr_cluster,,drop=FALSE]
+  curr_corr_tf_df <- curr_corr_tf_df[order(abs(curr_corr_tf_df$correlation), decreasing = TRUE),,drop=FALSE]
+  annot_tfs <- curr_corr_tf_df$gene[1:(ifelse(nrow(curr_corr_tf_df) < top_n, nrow(curr_corr_tf_df), top_n))]
+  expression_hits_df$tf_labels[expression_hits_df$family == curr_cluster &
+                                 expression_hits_df$gene %in% annot_tfs] <- 
+    expression_hits_df$gene[expression_hits_df$family == curr_cluster &
+                            expression_hits_df$gene %in% annot_tfs]
+}
+expression_hits_df$tf_labels[expression_hits_df$pval > 0.05] <- ""
+# Fig 3c =====
+ggplot(expression_hits_df, aes(x=family, y=correlation, color=expression_2)) +
+  geom_jitter(width = 0) + 
+  geom_label_repel(label=expression_hits_df$tf_labels, size=4) +
+  theme_bw(base_size=14) + 
+  theme_Nice() + theme(legend.position = "right") + 
+  labs(x="Motif cluster name", 
+       y="Spearman R", color="Mean TF expression across pools") 
+ggsave(filename=paste0(outdir, "/5c.pdf"), 
+       width = 12, height=6, useDingbats=FALSE)
+motif_families <- read.csv("data/tm/tm_motif_families.csv", row.names = 1)
+prom_mot_fam_scores <- read.csv("data/tm/tm_prom_mot_fam_scores.csv.gz", row.names=1)
+aligned_motif_patterns <- read.csv("data/tm/tm_motifs_in_promoters.csv.gz", row.names = 1, 
+                                   header = TRUE)
+colnames(aligned_motif_patterns) <- str_split_fixed(colnames(aligned_motif_patterns), "X", n=2)[,2]
+prom_umap <- umap::umap(aligned_motif_patterns)
+prom_umapp <- prom_umap$layout
+colnames(prom_umapp) <- c("UMAP1", "UMAP2")
+prom_umapp <- cbind(prom_umapp, prom_mot_fam_scores)
+E2F_plot <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=E2F.2.E2F)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right")+
+  labs(color="E2F/2")
+YY1_plot <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=YY1.C2H2)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right")+
+  labs(color="YY1")
+TBX_plot <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=TBX.2.TBX)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right")+
+  labs(color="TBX/2")
+ETS_plot <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=ETS.1.ETS)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right") +
+  labs(color="ETS/1")
+NR_plot <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=NR.1.nuclearreceptor)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right") +
+  labs(color="NR/1")
+KLF_plot <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=KLF.SP.2.C2H2)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right")+
+  labs(color="KLF/SP/2")
+SPI_plot <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=SPI.ETS)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right") +
+  labs(color="SPI")
+SPI_plot <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=SPI.ETS)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right") +
+  labs(color="SPI")
+ZFX_plot <- ggplot(prom_umapp, aes(x=UMAP1, y=UMAP2, color=ZFX.C2H2)) + 
+  geom_point(size=1) + theme_bw(base_size=14) +
+  coord_fixed() +
+  theme_Nice(angled=FALSE) + theme(legend.position="right") +
+  labs(color="ZFX")
+graphics.off()
+(E2F_plot | YY1_plot) / (TBX_plot | ETS_plot) / (NR_plot | KLF_plot) / (SPI_plot | ZFX_plot)
+ggsave(paste0(outdir, "5a.pdf"), width = 7.5, height=10)
