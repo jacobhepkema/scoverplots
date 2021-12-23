@@ -44,7 +44,8 @@ for(mot_cat in rownames(curr_category_annot_ad)){
 curr_category_annot_ad$`Motif frequency` <- category_freq_means_ad
 # Fig 2a =====
 category_means_aggregates_z_ad <- category_means_aggregates_z_ad[,order(colnames(category_means_aggregates_z_ad))]
-colnames(category_means_aggregates_z_ad) <- sapply(colnames(category_means_aggregates_z_ad), FUN=function(x){str_replace_all(x, "\\.", "/")}) 
+# colnames(category_means_aggregates_z_ad) <- sapply(colnames(category_means_aggregates_z_ad), FUN=function(x){str_replace_all(x, "\\.", "/")}) 
+category_means_aggregates_z_ad_ex <- to_z(category_means_aggregates_z_ad)[,2:6]
 category_means_aggregates_z_ad <- category_means_aggregates_z_ad[order(sapply(rownames(category_means_aggregates_z_ad), 
              FUN=function(x){
                str_split(x, ":")[[1]][2]
@@ -54,17 +55,14 @@ pheatmap(to_z(category_means_aggregates_z_ad), color=heatmap_colors,
          angle_col = 45, cellwidth = 14, cellheight = 14,
          border_color = NA, cluster_cols = FALSE,
          cluster_rows = FALSE,
-         filename = paste0(outdir, "6a_ad.pdf"),
+         filename = paste0(outdir, "6b_ad.pdf"),
          useDingbats=FALSE,
          annotation_row = curr_category_annot_ad)
-category_means_aggregates_z_ad_ex <- to_z(category_means_aggregates_z_ad)[,2:8]
 curr_annot_col <- data.frame(row.names=colnames(category_means_aggregates_z_ad_ex),
-                             Category=c("L2/3",
-                                        "L3/4/5",
+                             Category=c("L2",
+                                        "L3",
                                         "L4",
-                                        "L4/5",
                                         "L5",
-                                        "L5/6",
                                         "L6"))
 curr_annot_color <- list(
   Category = stata_pal()(length(unique(curr_annot_col$Category)))
@@ -73,7 +71,7 @@ names(curr_annot_color$Category) <- unique(curr_annot_col$Category)
 pheatmap(category_means_aggregates_z_ad_ex, color=heatmap_colors, 
          angle_col = 45, cellwidth = 12, cellheight = 9,
          border_color = NA, cluster_cols = FALSE, cluster_rows = TRUE,
-         filename = paste0(outdir, "6a_ad_ExOnly.pdf"),
+         filename = paste0(outdir, "6b_ad_ExOnly.pdf"),
          useDingbats=FALSE, annotation_col = curr_annot_col,
          annotation_colors = curr_annot_color,
          annotation_row = curr_category_annot_ad)
@@ -137,5 +135,37 @@ ggplot(expression_hits_df_ad, aes(x=family, y=correlation, color=expression_2)) 
   theme_Nice() + theme(legend.position = "right") + 
   labs(x="Motif cluster name", 
        y="Spearman R", color="Mean TF expression across pools") 
-ggsave(filename=paste0(outdir, "/6c.pdf"), 
+ggsave(filename=paste0(outdir, "/6d.pdf"), 
        width = 9, height=6, useDingbats=FALSE)
+ad_var <- read.csv("data/ad/ad_peak_annotation.csv.gz", row.names=1)
+region_embedding <- read.csv("data/ad/ad_peak_embedding_reproducible_motif_families.csv.gz", row.names = 1)
+repr_fams <- colnames(region_embedding)[3:ncol(region_embedding)]
+region_embedding <- cbind(region_embedding, ad_var)
+ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=n_cells))+geom_point(size=.5)
+ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=tss_distance_2))+geom_point(size=.5)
+ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=tss_distance))+geom_point(size=.5)
+region_embedding$log_tss_dist <- log1p(region_embedding$tss_distance)
+tss_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=log_tss_dist))+geom_point(size=.5)+
+  theme_Nice() + theme(legend.position="right") + labs(color="log1p(|dist|)") + 
+  coord_equal()
+klf_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=KLF.SP.2.C2H2))+geom_point(size=.5)+
+  theme_Nice() + theme(legend.position="right") + labs(color="KLF/SP/2") +
+  coord_equal()
+e2f_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=E2F.2.E2F))+geom_point(size=.5)+
+  theme_Nice() + theme(legend.position="right") + labs(color="E2F/2") +
+  coord_equal()
+n_cells_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=n_cells))+geom_point(size=.5)+
+  theme_Nice() + theme(legend.position="right") + labs(color="N cells accessible") +
+  coord_equal()
+(tss_plot | n_cells_plot) / (klf_plot | e2f_plot)
+ggsave(paste0(outdir, "/ad_supp_umap.png"), width=16, height=4)
+egr_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=EGR.C2H2))+geom_point(size=.5)+
+  theme_Nice() + theme(legend.position="right") + labs(color="EGR")
+ebox_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=Ebox.CATATG.bHLH))+geom_point(size=.5)+
+  theme_Nice() + theme(legend.position="right") + labs(color="Ebox/CATATG")
+ap1_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=AP1.2.bZIP))+geom_point(size=.5)+
+  theme_Nice() + theme(legend.position="right") + labs(color="AP1/2")
+rfx_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=RFX.1.RFX))+geom_point(size=.5)+
+  theme_Nice() + theme(legend.position="right") + labs(color="RFX/1")
+egr_plot | ap1_plot | rfx_plot | ebox_plot 
+ggsave(paste0(outdir, "/6f.png"), width=16, height=3)

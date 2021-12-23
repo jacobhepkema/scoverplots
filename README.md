@@ -22,5 +22,5 @@ Rscript snarep0.R
 ## SNARE-seq Adult
 
 ```
-TODO
+Rscript snaread.R
 ```
