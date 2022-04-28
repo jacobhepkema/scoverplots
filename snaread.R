@@ -75,6 +75,7 @@ pheatmap(category_means_aggregates_z_ad_ex, color=heatmap_colors,
          useDingbats=FALSE, annotation_col = curr_annot_col,
          annotation_colors = curr_annot_color,
          annotation_row = curr_category_annot_ad)
+
 all_LOO_mat_ad <- as.matrix(read.csv("data/ad/ad_influence.csv.gz", row.names = 1))
 all_LOO_mat_selection_ad <- all_LOO_mat_ad[rownames(motif_family_annotation_ad[motif_family_annotation_ad$subfamily %in% rownames(subfams_loo_df_ad),]),]
 LOO_mat_melted_ad <- melt(all_LOO_mat_selection_ad) %>% magrittr::set_colnames(c("Motif", "Pool", "Weight"))
@@ -135,8 +136,9 @@ ggplot(expression_hits_df_ad, aes(x=family, y=correlation, color=expression_2)) 
   theme_Nice() + theme(legend.position = "right") + 
   labs(x="Motif cluster name", 
        y="Spearman R", color="Mean TF expression across pools") 
-ggsave(filename=paste0(outdir, "/6d.pdf"), 
+ggsave(filename=paste0(outdir, "/ad_supp2.pdf"), 
        width = 9, height=6, useDingbats=FALSE)
+
 ad_var <- read.csv("data/ad/ad_peak_annotation.csv.gz", row.names=1)
 region_embedding <- read.csv("data/ad/ad_peak_embedding_reproducible_motif_families.csv.gz", row.names = 1)
 repr_fams <- colnames(region_embedding)[3:ncol(region_embedding)]
@@ -145,27 +147,32 @@ ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=n_cells))+geom_point(size=.
 ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=tss_distance_2))+geom_point(size=.5)
 ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=tss_distance))+geom_point(size=.5)
 region_embedding$log_tss_dist <- log1p(region_embedding$tss_distance)
-tss_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=log_tss_dist))+geom_point(size=.5)+
-  theme_Nice() + theme(legend.position="right") + labs(color="log1p(|dist|)") + 
-  coord_equal()
-klf_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=KLF.SP.2.C2H2))+geom_point(size=.5)+
-  theme_Nice() + theme(legend.position="right") + labs(color="KLF/SP/2") +
-  coord_equal()
-e2f_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=E2F.2.E2F))+geom_point(size=.5)+
-  theme_Nice() + theme(legend.position="right") + labs(color="E2F/2") +
-  coord_equal()
-n_cells_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=n_cells))+geom_point(size=.5)+
-  theme_Nice() + theme(legend.position="right") + labs(color="N cells accessible") +
-  coord_equal()
-(tss_plot | n_cells_plot) / (klf_plot | e2f_plot)
-ggsave(paste0(outdir, "/ad_supp_umap.png"), width=16, height=4)
-egr_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=EGR.C2H2))+geom_point(size=.5)+
+
+ps = 0.0005
+tss_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=log_tss_dist))+geom_point(size=ps)+
+  theme_Nice() + theme(legend.position="right") + labs(color="log1p(|dist|)")
+klf_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=KLF.SP.2.C2H2))+geom_point(size=ps)+
+  theme_Nice() + theme(legend.position="right") + labs(color="KLF/SP/2")
+e2f_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=E2F.2.E2F))+geom_point(size=ps)+
+  theme_Nice() + theme(legend.position="right") + labs(color="E2F/2")
+n_cells_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=n_cells))+geom_point(size=ps)+
+  theme_Nice() + theme(legend.position="right") + labs(color="# accessible")
+egr_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=EGR.C2H2))+geom_point(size=ps)+
   theme_Nice() + theme(legend.position="right") + labs(color="EGR")
-ebox_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=Ebox.CATATG.bHLH))+geom_point(size=.5)+
+ebox_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=Ebox.CATATG.bHLH))+geom_point(size=ps)+
   theme_Nice() + theme(legend.position="right") + labs(color="Ebox/CATATG")
-ap1_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=AP1.2.bZIP))+geom_point(size=.5)+
+ap1_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=AP1.2.bZIP))+geom_point(size=ps)+
   theme_Nice() + theme(legend.position="right") + labs(color="AP1/2")
-rfx_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=RFX.1.RFX))+geom_point(size=.5)+
-  theme_Nice() + theme(legend.position="right") + labs(color="RFX/1")
-egr_plot | ap1_plot | rfx_plot | ebox_plot 
-ggsave(paste0(outdir, "/6f.png"), width=16, height=3)
+rfx_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=RFX.1.RFX))+geom_point(size=ps)+
+  theme_Nice() + theme(legend.position="right") + labs(color="RFX/1") 
+ets_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=ETS.1.ETS))+geom_point(size=ps)+
+  theme_Nice() + theme(legend.position="right") + labs(color="ETS/1")
+mef2_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=MEF2.MADS))+geom_point(size=ps)+
+  theme_Nice() + theme(legend.position="right") + labs(color="MEF2")
+ccaat_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=CCAAT.CEBP.bZIP))+geom_point(size=ps)+
+  theme_Nice() + theme(legend.position="right") + labs(color="CCAAT/CEBP")
+hox_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=HD.12.homeodomain))+geom_point(size=ps)+
+  theme_Nice() + theme(legend.position="right") + labs(color="HD/12")
+
+(tss_plot | klf_plot | egr_plot | mef2_plot ) / (n_cells_plot | ccaat_plot | hox_plot | ebox_plot)
+ggsave(paste0(outdir, "/6d.png"), width=16, height=6)
