@@ -143,20 +143,12 @@ ad_var <- read.csv("data/ad/ad_peak_annotation.csv.gz", row.names=1)
 region_embedding <- read.csv("data/ad/ad_peak_embedding_reproducible_motif_families.csv.gz", row.names = 1)
 repr_fams <- colnames(region_embedding)[3:ncol(region_embedding)]
 region_embedding <- cbind(region_embedding, ad_var)
-ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=n_cells))+geom_point(size=.5)
-ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=tss_distance_2))+geom_point(size=.5)
-ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=tss_distance))+geom_point(size=.5)
-region_embedding$log_tss_dist <- log1p(region_embedding$tss_distance)
 
 ps = 0.0005
-tss_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=log_tss_dist))+geom_point(size=ps)+
-  theme_Nice() + theme(legend.position="right") + labs(color="log1p(|dist|)")
 klf_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=KLF.SP.2.C2H2))+geom_point(size=ps)+
   theme_Nice() + theme(legend.position="right") + labs(color="KLF/SP/2")
 e2f_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=E2F.2.E2F))+geom_point(size=ps)+
   theme_Nice() + theme(legend.position="right") + labs(color="E2F/2")
-n_cells_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=n_cells))+geom_point(size=ps)+
-  theme_Nice() + theme(legend.position="right") + labs(color="# accessible")
 egr_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=EGR.C2H2))+geom_point(size=ps)+
   theme_Nice() + theme(legend.position="right") + labs(color="EGR")
 ebox_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=Ebox.CATATG.bHLH))+geom_point(size=ps)+
@@ -174,5 +166,5 @@ ccaat_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=CCAAT.CEBP.bZ
 hox_plot <- ggplot(region_embedding, aes(x=UMAP1, y=UMAP2, color=HD.12.homeodomain))+geom_point(size=ps)+
   theme_Nice() + theme(legend.position="right") + labs(color="HD/12")
 
-(tss_plot | klf_plot | egr_plot | mef2_plot ) / (n_cells_plot | ccaat_plot | hox_plot | ebox_plot)
+(ap1_plot | klf_plot | egr_plot | mef2_plot ) / (rfx_plot | ccaat_plot | hox_plot | ebox_plot)
 ggsave(paste0(outdir, "/6d.png"), width=16, height=6)
