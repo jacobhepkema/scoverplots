@@ -1,26 +1,22 @@
 # scoverplots
 Reproduce plots for scover manuscript. Output will be generated in `output` dir. 
 
-## Kidney
+## Human kidney
 
-```
-Rscript kidney.R
+```bash
+# Work in progress to be updated
+Rscript humankidney.R
 ```
 
 ## Tabula Muris
 
-```
+```bash
+# Work in progress to be updated
 Rscript tabulamuris.R
 ```
 
-## SNARE-seq P0
-
-```
-Rscript snarep0.R
-```
-
-## SNARE-seq Adult
-
-```
-Rscript snaread.R
+## Human brain
+```bash
+# Work in progress, will be added soon
+Rscript humanbrain.R
 ```
