@@ -7,6 +7,7 @@ First, make sure to untar the following files in `data/humankidney`:
 
 ```
 20230123_kidney_all_loo_scores_df.csv.tar.gz
+20230125_kidney_repr_aligned_motif_patterns_in_genes.csv.tar.gz
 ```
 
 ```bash
