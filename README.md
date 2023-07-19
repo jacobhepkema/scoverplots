@@ -1,7 +1,13 @@
 # scoverplots
-Reproduce plots for scover manuscript. Output will be generated in `output` dir. 
+Reproduce plots for scover manuscript. Output will be generated in `output` dir. For the scover repository with model code, please see [https://github.com/jacobhepkema/scover](https://github.com/jacobhepkema/scover)
 
 ## Human kidney
+
+First, make sure to untar the following files in `data/humankidney`:
+
+```
+20230123_kidney_all_loo_scores_df.csv.tar.gz
+```
 
 ```bash
 # Work in progress to be updated
