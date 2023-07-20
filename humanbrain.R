@@ -53,7 +53,7 @@ pheatmap(to_z(category_means_aggregates_z_trevino), color=heatmap_colors,
          angle_col = 45, cellwidth = 14, cellheight = 14,
          border_color = NA, cluster_cols = FALSE,
          cluster_rows = TRUE,
-         filename = paste0(outdir, "heatmap_trevino.pdf"),
+         filename = paste0(outdir, "heatmap_humanbrain.pdf"),
          useDingbats=FALSE,
          annotation_row = curr_category_annot_trevino)
 
