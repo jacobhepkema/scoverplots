@@ -11,7 +11,6 @@ First, make sure to untar the following files in `data/humankidney`:
 ```
 
 ```bash
-# Work in progress to be updated
 Rscript humankidney.R
 ```
 
@@ -24,7 +23,6 @@ First, make sure to untar the following files in `data/tm`:
 ```
 
 ```bash
-# Work in progress to be updated
 Rscript tabulamuris.R
 ```
 
