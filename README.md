@@ -27,7 +27,12 @@ Rscript tabulamuris.R
 ```
 
 ## Human brain
+
+First, make sure to untar the following files in `data/humanbrain`:
+```
+20230110_trevino_100neighbours_all_loo_scores_df.csv.tar.gz
+```
+
 ```bash
-# Work in progress, will be added soon
 Rscript humanbrain.R
 ```
